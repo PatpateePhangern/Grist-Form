@@ -1,0 +1,281 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>New Competitor Entry</title>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, sans-serif; padding: 16px; margin: 0; color: #222; max-width: 640px; }
+  h3 { margin: 18px 0 8px; padding-top: 12px; border-top: 1px solid #e0e0e0; }
+  h3:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  label { display: block; font-size: 12px; color: #666; margin-top: 8px; }
+  input[type=text], input[type=number], input[type=url], select {
+    font-size: 14px; padding: 7px; margin-top: 2px; width: 100%; border: 1px solid #ccc; border-radius: 4px;
+  }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  .checkbox-line { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+  .checkbox-line input { width: auto; }
+  .colour-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; padding: 6px; background: #f7f7f7; border-radius: 4px; }
+  .colour-row input[type=text] { flex: 1; }
+  .colour-row button { flex: 0 0 auto; background: #d9534f; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+  #addColourBtn { background: #eee; border: 1px dashed #999; border-radius: 4px; padding: 8px; width: 100%; margin-top: 8px; cursor: pointer; }
+  #submitBtn { background: #16a35a; color: white; border: none; border-radius: 4px; padding: 12px; width: 100%; margin-top: 20px; font-size: 15px; cursor: pointer; }
+  #submitBtn:disabled { background: #aaa; }
+  #status { margin-top: 12px; white-space: pre-wrap; font-size: 13px; color: #555; min-height: 20px; }
+  #status.error { color: #b00020; }
+  #status.success { color: #16a35a; font-weight: 600; }
+  .hint { font-size: 11px; color: #999; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <h3>Competitor Info</h3>
+  <label>Product Name</label>
+  <input type="text" id="f_productName">
+
+  <div class="row">
+    <div>
+      <label>Source Type</label>
+      <input type="text" id="f_sourceType" placeholder="e.g. Shopee">
+    </div>
+    <div>
+      <label>Shop Name</label>
+      <input type="text" id="f_shopName">
+    </div>
+  </div>
+
+  <label>Source Link</label>
+  <input type="url" id="f_sourceLink">
+
+  <div class="row">
+    <div>
+      <label>Reply Rate (0–1)</label>
+      <input type="number" id="f_replyRate" step="0.01" min="0" max="1">
+    </div>
+    <div>
+      <label>Score</label>
+      <input type="number" id="f_score" step="1">
+    </div>
+    <div>
+      <label>Item Number</label>
+      <input type="number" id="f_itemNumber" step="1">
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label>Stars</label>
+      <input type="number" id="f_stars" step="0.1" min="0" max="5">
+    </div>
+    <div>
+      <label>Review Count</label>
+      <input type="number" id="f_reviewNum" step="1">
+    </div>
+    <div>
+      <label id="f_provinceLabel">Province</label>
+      <select id="f_province"></select>
+    </div>
+  </div>
+
+  <label>Product Type</label>
+  <div id="productTypeChoices"></div>
+
+  <h3>Colors Sold at This Listing</h3>
+  <div class="hint">Search by name, type, or hex code. Add one row per color/type combo this listing actually sells.</div>
+  <div id="colourRows"></div>
+  <button type="button" id="addColourBtn">+ Add another color</button>
+  <datalist id="colourOptions"></datalist>
+
+  <h3>Delivery</h3>
+  <div class="checkbox-line"><input type="checkbox" id="f_instant"><label style="margin:0">Instant Delivery</label></div>
+  <div class="checkbox-line"><input type="checkbox" id="f_express"><label style="margin:0">Express Delivery</label></div>
+  <div class="checkbox-line"><input type="checkbox" id="f_standard"><label style="margin:0">Standard Delivery</label></div>
+
+  <h3>Pricing</h3>
+  <div class="row">
+    <div>
+      <label>Original Price</label>
+      <input type="number" id="f_original" step="0.01">
+    </div>
+    <div>
+      <label>Discounted Price</label>
+      <input type="number" id="f_discount" step="0.01">
+    </div>
+  </div>
+
+  <button id="submitBtn">Submit Entry</button>
+  <div id="status"></div>
+
+<script>
+let colourLabelToRef = {};   // "Label text" -> colRef
+let provinceChoices = [];
+let productTypeChoices = [];
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = cls || '';
+}
+
+function addColourRow(prefill) {
+  const wrap = document.getElementById('colourRows');
+  const row = document.createElement('div');
+  row.className = 'colour-row';
+  row.innerHTML = `
+    <input type="text" class="colour-search" list="colourOptions" placeholder="Search color...">
+    <label style="display:flex;align-items:center;gap:4px;margin:0;white-space:nowrap;">
+      <input type="checkbox" class="colour-instock" checked> In stock
+    </label>
+    <button type="button" class="remove-colour">&times;</button>
+  `;
+  wrap.appendChild(row);
+  row.querySelector('.remove-colour').addEventListener('click', () => row.remove());
+}
+
+async function init() {
+  try {
+    // Filament colors for the searchable datalist
+    const fc = await grist.docApi.fetchTable('Filament_Colours');
+    const datalist = document.getElementById('colourOptions');
+    fc.id.forEach((id, i) => {
+      const label = fc.Label[i];
+      colourLabelToRef[label] = id;
+      const opt = document.createElement('option');
+      opt.value = label;
+      datalist.appendChild(opt);
+    });
+
+    // Province (Choice) options from Competitors_ID column "A"
+    const idCols = await grist.docApi.fetchTable('_grist_Tables_column');
+    // find table rowId for Competitors_ID
+    const tables = await grist.docApi.fetchTable('_grist_Tables');
+    const cidTableRowId = tables.id[tables.tableId.indexOf('Competitors_ID')];
+    const aIdx = idCols.colId.findIndex((c, i) => c === 'A' && idCols.parentId[i] === cidTableRowId);
+    const ptIdx = idCols.colId.findIndex((c, i) => c === 'Product_Type' && idCols.parentId[i] === cidTableRowId);
+
+    const aOpts = JSON.parse(idCols.widgetOptions[aIdx] || '{}');
+    provinceChoices = aOpts.choices || [];
+    document.getElementById('f_provinceLabel').textContent = idCols.label[aIdx] || 'Province';
+    const provSelect = document.getElementById('f_province');
+    provSelect.innerHTML = '<option value=""></option>' + provinceChoices.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    const ptOpts = JSON.parse(idCols.widgetOptions[ptIdx] || '{}');
+    productTypeChoices = ptOpts.choices || [];
+    const ptDiv = document.getElementById('productTypeChoices');
+    ptDiv.innerHTML = productTypeChoices.map((c, i) =>
+      `<label class="checkbox-line"><input type="checkbox" class="pt-choice" value="${c}"> ${c}</label>`
+    ).join('');
+
+    addColourRow();
+  } catch (e) {
+    setStatus('Failed to load form data: ' + e.message, 'error');
+  }
+}
+
+document.getElementById('addColourBtn').addEventListener('click', () => addColourRow());
+
+function num(id) {
+  const v = document.getElementById(id).value;
+  return v === '' ? null : Number(v);
+}
+function txt(id) {
+  return document.getElementById(id).value.trim();
+}
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  try {
+    const productName = txt('f_productName');
+    const shopName = txt('f_shopName');
+    const sourceLink = txt('f_sourceLink');
+    if (!productName || !shopName || !sourceLink) {
+      setStatus('Product Name, Shop Name, and Source Link are required.', 'error');
+      btn.disabled = false;
+      return;
+    }
+
+    const colourRows = Array.from(document.querySelectorAll('.colour-row'));
+    const colourEntries = [];
+    for (const row of colourRows) {
+      const label = row.querySelector('.colour-search').value.trim();
+      if (!label) continue;
+      const ref = colourLabelToRef[label];
+      if (!ref) {
+        setStatus(`Color "${label}" doesn't match anything in the list — pick one from the dropdown suggestions.`, 'error');
+        btn.disabled = false;
+        return;
+      }
+      colourEntries.push({ colourRef: ref, inStock: row.querySelector('.colour-instock').checked });
+    }
+    if (colourEntries.length === 0) {
+      setStatus('Add at least one color.', 'error');
+      btn.disabled = false;
+      return;
+    }
+
+    const productTypeSelected = Array.from(document.querySelectorAll('.pt-choice:checked')).map(c => c.value);
+
+    setStatus('Creating competitor listing...');
+    const idResult = await grist.docApi.applyUserActions([
+      ["AddRecord", "Competitors_ID", null, {
+        Product_Name: productName,
+        Source_Type: txt('f_sourceType'),
+        Source_Link: sourceLink,
+        Shop_Name: shopName,
+        Reply_Rate: num('f_replyRate'),
+        Score: num('f_score'),
+        Item_Number: num('f_itemNumber'),
+        Stars: num('f_stars'),
+        Review_Num: num('f_reviewNum'),
+        A: txt('f_province') || null,
+        Product_Type: productTypeSelected.length ? ["L", ...productTypeSelected] : null,
+      }]
+    ]);
+    const newId = idResult.retValues[0];
+
+    setStatus(`Adding ${colourEntries.length} color(s), delivery, and pricing...`);
+    const followupActions = [
+      ...colourEntries.map(c => ["AddRecord", "Competitors_Colours", null, {
+        Competitor_ID: newId, Colour: c.colourRef, In_Stock_: c.inStock,
+      }]),
+      ["AddRecord", "Competitors_Delivery", null, {
+        Competitor_ID: newId,
+        Instant_Delivery: document.getElementById('f_instant').checked,
+        Express_Delivery: document.getElementById('f_express').checked,
+        Standard_Delivery: document.getElementById('f_standard').checked,
+      }],
+      ["AddRecord", "Competitors_Pricing", null, {
+        Competitor_ID: newId,
+        Original: num('f_original'),
+        Discount: num('f_discount'),
+      }],
+    ];
+    await grist.docApi.applyUserActions(followupActions);
+
+    // Fetch the generated Competitor_ID text for confirmation
+    const idRecords = await grist.docApi.fetchTable('Competitors_ID');
+    const idx = idRecords.id.indexOf(newId);
+    const cidText = idRecords.Competitor_ID[idx];
+
+    setStatus(`Done! Created ${cidText} with ${colourEntries.length} color(s), delivery info, and pricing.`, 'success');
+
+    // Reset form for the next entry
+    document.querySelectorAll('input[type=text], input[type=url], input[type=number]').forEach(i => i.value = '');
+    document.querySelectorAll('input[type=checkbox]').forEach(i => i.checked = false);
+    document.getElementById('f_province').value = '';
+    document.getElementById('colourRows').innerHTML = '';
+    addColourRow();
+  } catch (e) {
+    setStatus('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+grist.ready({requiredAccess: 'full'});
+init();
+</script>
+</body>
+</html>
