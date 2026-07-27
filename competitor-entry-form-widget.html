@@ -64,7 +64,7 @@
   html, body { background: var(--bg); }
   body {
     font-family: -apple-system, sans-serif; padding: 16px; margin: 0; color: var(--fg);
-    max-width: 640px; position: relative;
+    max-width: 680px; position: relative;
   }
   h3 { margin: 18px 0 8px; padding-top: 12px; border-top: 1px solid var(--divider); }
   h3:first-child { margin-top: 0; padding-top: 0; border-top: none; }
@@ -85,23 +85,38 @@
     font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 0;
   }
 
-  .colour-row {
-    display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 8px;
-    background: var(--panel-bg); border-radius: 4px; flex-wrap: wrap;
+  .shortcuts-panel {
+    margin-top: 6px; margin-right: 44px; font-size: 12px; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 10px; background: var(--panel-bg);
   }
-  .colour-type-input { flex: 0 0 150px; margin-top: 0; }
-  .colour-search-wrap { flex: 1; position: relative; min-width: 160px; }
-  .colour-search { width: 100%; margin-top: 0; }
-  .colour-search.confirmed { border-color: var(--confirmed-border); background: var(--confirmed-bg); }
-  .colour-suggestions {
+  .shortcuts-panel summary { cursor: pointer; font-weight: 600; color: var(--fg); }
+  .shortcuts-panel ul { margin: 8px 0 2px; padding-left: 18px; }
+  .shortcuts-panel li { margin-bottom: 5px; }
+  .shortcuts-panel kbd {
+    background: var(--input-bg); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px;
+    font-family: ui-monospace, monospace; font-size: 11px; color: var(--fg);
+  }
+
+  .suggest-wrap { position: relative; }
+  .suggestions {
     position: absolute; top: 100%; left: 0; right: 0; background: var(--suggestion-bg); border: 1px solid var(--border);
     border-radius: 4px; margin-top: 2px; max-height: 220px; overflow-y: auto; z-index: 10;
     box-shadow: 0 4px 10px var(--shadow); display: none;
   }
-  .colour-suggestions.open { display: block; }
-  .colour-suggestion { padding: 7px 9px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--fg); }
-  .colour-suggestion .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--swatch-border); flex: 0 0 auto; }
-  .colour-suggestion.active { background: var(--suggestion-hover-bg); }
+  .suggestions.open { display: block; }
+  .suggestion { padding: 7px 9px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--fg); }
+  .suggestion .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--swatch-border); flex: 0 0 auto; }
+  .suggestion.active { background: var(--suggestion-hover-bg); }
+
+  .colour-row {
+    display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 8px;
+    background: var(--panel-bg); border-radius: 4px; flex-wrap: wrap;
+  }
+  .type1-wrap, .type2-wrap { flex: 0 0 120px; }
+  .type1-wrap input, .type2-wrap input { margin-top: 0; }
+  .colour-search-wrap { flex: 1; min-width: 150px; }
+  .colour-search-wrap input { margin-top: 0; }
+  .colour-search.confirmed { border-color: var(--confirmed-border); background: var(--confirmed-bg); }
   .colour-swatch-preview {
     flex: 0 0 30px; width: 30px; height: 30px; border-radius: 5px; border: 1px dashed var(--swatch-border);
     background: transparent; margin-top: 0;
@@ -129,55 +144,71 @@
 </style>
 </head>
 <body>
-  <button type="button" class="theme-toggle" id="themeToggle" title="Toggle light/dark">🌙</button>
+  <button type="button" class="theme-toggle" id="themeToggle" title="Toggle light/dark (Ctrl/Cmd+Shift+L)">🌙</button>
+
+  <details class="shortcuts-panel">
+    <summary>⌨ Keyboard shortcuts (fully mouse-free entry)</summary>
+    <ul>
+      <li><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> — next / previous field</li>
+      <li><kbd>Enter</kbd> — pick the highlighted suggestion and move to the next field; on a plain field it just moves on; on the very last field (Discounted Price) it submits the form</li>
+      <li><kbd>↓</kbd> / <kbd>↑</kbd> — move through Type 1 / Type 2 / Color / Province suggestions</li>
+      <li><kbd>Esc</kbd> — close the current suggestion list</li>
+      <li><kbd>Ctrl/⌘+Enter</kbd> — add a new color row and jump into its Type 1 field</li>
+      <li><kbd>Ctrl/⌘+Shift+Backspace</kbd> — remove the color row you're currently in</li>
+      <li><kbd>Ctrl/⌘+Shift+L</kbd> — toggle dark / light theme</li>
+      <li>Checkboxes: focus with Tab/Enter, toggle with <kbd>Space</kbd> (standard browser behavior)</li>
+    </ul>
+  </details>
 
   <h3>Competitor Info</h3>
   <label>Product Name</label>
-  <input type="text" id="f_productName">
+  <input type="text" id="f_productName" data-kbstop>
 
   <div class="row">
     <div>
       <label>Source Type</label>
-      <input type="text" id="f_sourceType" placeholder="e.g. Shopee">
+      <input type="text" id="f_sourceType" placeholder="e.g. Shopee" data-kbstop>
     </div>
     <div>
       <label>Shop Name</label>
-      <input type="text" id="f_shopName">
+      <input type="text" id="f_shopName" data-kbstop>
     </div>
   </div>
 
   <label>Source Link</label>
-  <input type="url" id="f_sourceLink">
+  <input type="url" id="f_sourceLink" data-kbstop>
 
   <div class="row">
     <div>
       <label>Reply Rate (0–1)</label>
-      <input type="number" id="f_replyRate" step="0.01" min="0" max="1">
+      <input type="number" id="f_replyRate" step="0.01" min="0" max="1" data-kbstop>
     </div>
     <div>
       <label>Score</label>
-      <input type="number" id="f_score" step="1">
+      <input type="number" id="f_score" step="1" data-kbstop>
     </div>
     <div>
       <label>Item Number</label>
-      <input type="number" id="f_itemNumber" step="1">
+      <input type="number" id="f_itemNumber" step="1" data-kbstop>
     </div>
   </div>
 
   <div class="row">
     <div>
       <label>Stars</label>
-      <input type="number" id="f_stars" step="0.1" min="0" max="5">
+      <input type="number" id="f_stars" step="0.1" min="0" max="5" data-kbstop>
     </div>
     <div>
       <label>Review Count</label>
-      <input type="number" id="f_reviewNum" step="1">
+      <input type="number" id="f_reviewNum" step="1" data-kbstop>
     </div>
     <div>
       <label id="f_provinceLabel">Province</label>
-      <input type="text" id="f_province" list="provinceListOptions" placeholder="Type or pick a province">
-      <datalist id="provinceListOptions"></datalist>
-      <div class="hint">Type a new one and it'll be added automatically.</div>
+      <div class="suggest-wrap">
+        <input type="text" id="f_province" placeholder="Type or pick a province" autocomplete="off" data-kbstop>
+        <div class="suggestions" id="provinceSuggestions"></div>
+      </div>
+      <div class="hint">Type a new one — it's added automatically and usable right away.</div>
     </div>
   </div>
 
@@ -185,25 +216,24 @@
   <div id="productTypeChoices"></div>
 
   <h3>Colors Sold at This Listing</h3>
-  <div class="hint">Type a type (e.g. "PLA Matte") to narrow the list — or leave it blank for all types. Type the first few letters of the color and press Enter to select it.</div>
+  <div class="hint">Type 1 (e.g. "PLA"), Type 2 (e.g. "Matte") — both optional filters. Then type the color name and press Enter to pick it. Press Ctrl/⌘+Enter anywhere to add another color.</div>
   <div id="colourRows"></div>
-  <datalist id="typeListOptions"></datalist>
-  <button type="button" id="addColourBtn">+ Add another color</button>
+  <button type="button" id="addColourBtn">+ Add another color (Ctrl/⌘+Enter)</button>
 
   <h3>Delivery</h3>
-  <div class="checkbox-line"><input type="checkbox" id="f_instant"><label style="margin:0">Instant Delivery</label></div>
-  <div class="checkbox-line"><input type="checkbox" id="f_express"><label style="margin:0">Express Delivery</label></div>
-  <div class="checkbox-line"><input type="checkbox" id="f_standard"><label style="margin:0">Standard Delivery</label></div>
+  <div class="checkbox-line"><input type="checkbox" id="f_instant" data-kbstop><label style="margin:0">Instant Delivery</label></div>
+  <div class="checkbox-line"><input type="checkbox" id="f_express" data-kbstop><label style="margin:0">Express Delivery</label></div>
+  <div class="checkbox-line"><input type="checkbox" id="f_standard" data-kbstop><label style="margin:0">Standard Delivery</label></div>
 
   <h3>Pricing</h3>
   <div class="row">
     <div>
       <label>Original Price</label>
-      <input type="number" id="f_original" step="0.01">
+      <input type="number" id="f_original" step="0.01" data-kbstop>
     </div>
     <div>
       <label>Discounted Price</label>
-      <input type="number" id="f_discount" step="0.01">
+      <input type="number" id="f_discount" step="0.01" data-kbstop>
     </div>
   </div>
 
@@ -229,14 +259,14 @@ function applyTheme(theme) {
 }
 let currentTheme = getPreferredTheme();
 applyTheme(currentTheme);
-document.getElementById('themeToggle').addEventListener('click', () => {
+function toggleTheme() {
   currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
   applyTheme(currentTheme);
-});
+}
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
 // ---------- State ----------
-let fcList = [];         // [{id, name, type1, type2, hex, label, typeCombo}]
-let typeCombos = [];     // sorted unique "Type1 Type2" strings
+let fcList = [];         // [{id, name, type1, type2, hex, label}]
 let provinceChoices = [];
 let productTypeChoices = [];
 let provinceColType = 'Choice';
@@ -254,15 +284,6 @@ function matchesQuery(candidate, query) {
   return candidate.name.toLowerCase().startsWith(q) || candidate.hex.toLowerCase().includes(q);
 }
 
-function getFilteredCandidates(row) {
-  const typeVal = row.querySelector('.colour-type-input').value.trim().toLowerCase();
-  const query = row.querySelector('.colour-search').value.trim();
-  let pool = fcList;
-  if (typeVal) pool = pool.filter(c => c.typeCombo.toLowerCase().includes(typeVal));
-  pool = pool.filter(c => matchesQuery(c, query));
-  return pool.slice(0, 8);
-}
-
 function setSwatchPreview(row, hex) {
   const preview = row.querySelector('.colour-swatch-preview');
   if (hex) {
@@ -274,41 +295,165 @@ function setSwatchPreview(row, hex) {
   }
 }
 
-function renderSuggestions(row) {
-  const box = row.querySelector('.colour-suggestions');
-  const candidates = getFilteredCandidates(row);
-  row._activeIndex = 0;
-  if (candidates.length === 0) {
-    box.classList.remove('open');
-    box.innerHTML = '';
+// ---------- Keyboard navigation ----------
+const KBSTOP = '[data-kbstop]';
+
+function advanceFocus(current) {
+  const stops = Array.from(document.querySelectorAll(KBSTOP));
+  const idx = stops.indexOf(current);
+  if (idx === -1) return;
+  if (idx === stops.length - 1) {
+    document.getElementById('submitBtn').click();
     return;
   }
-  box.innerHTML = candidates.map((c, i) => `
-    <div class="colour-suggestion${i === 0 ? ' active' : ''}" data-idx="${i}">
-      <span class="swatch" style="background:${c.hex}"></span>
-      <span>${c.name} — ${c.type1} ${c.type2} (${c.hex})</span>
-    </div>
-  `).join('');
-  box._candidates = candidates;
-  box.classList.add('open');
-  box.querySelectorAll('.colour-suggestion').forEach(el => {
-    el.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      const idx = Number(el.dataset.idx);
-      selectCandidate(row, box._candidates[idx]);
-    });
-  });
+  const next = stops[idx + 1];
+  next.focus();
+  if (typeof next.select === 'function' && next.type !== 'checkbox') {
+    try { next.select(); } catch (e) { /* ignore */ }
+  }
 }
 
-function selectCandidate(row, candidate) {
-  const input = row.querySelector('.colour-search');
-  input.value = `${candidate.name} (${candidate.hex})`;
-  input.classList.add('confirmed');
-  row.dataset.colourRef = candidate.id;
-  setSwatchPreview(row, candidate.hex);
-  const box = row.querySelector('.colour-suggestions');
-  box.classList.remove('open');
-  box.innerHTML = '';
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  if (e.ctrlKey || e.metaKey) return; // handled separately (add color row)
+  const el = e.target;
+  if (!el.hasAttribute || !el.hasAttribute('data-kbstop')) return;
+  e.preventDefault();
+  advanceFocus(el);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    const row = addColourRow();
+    row.querySelector('.type1-input').focus();
+  } else if (e.key === 'Backspace' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+    const row = e.target.closest ? e.target.closest('.colour-row') : null;
+    if (row) {
+      e.preventDefault();
+      removeColourRow(row);
+    }
+  } else if (e.key.toLowerCase() === 'l' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+    e.preventDefault();
+    toggleTheme();
+  }
+});
+
+// ---------- Generic suggestion-box widget ----------
+// Powers Type 1 / Type 2 / Color / Province fields with the same
+// arrow-key-navigate + Enter-to-pick behavior.
+function setupSuggest(input, box, { getCandidates, renderItem, onSelect }) {
+  let candidates = [];
+  let activeIndex = 0;
+
+  function render() {
+    candidates = getCandidates(input.value.trim());
+    if (!candidates.length) { close(); return; }
+    activeIndex = 0;
+    box.innerHTML = candidates.map((c, i) =>
+      `<div class="suggestion${i === 0 ? ' active' : ''}" data-idx="${i}">${renderItem(c)}</div>`
+    ).join('');
+    box.classList.add('open');
+    box.querySelectorAll('.suggestion').forEach((el) => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        pick(Number(el.dataset.idx));
+      });
+    });
+  }
+  function close() {
+    box.classList.remove('open');
+    box.innerHTML = '';
+    candidates = [];
+  }
+  function pick(idx) {
+    const c = candidates[idx];
+    if (!c) return false;
+    onSelect(c);
+    close();
+    return true;
+  }
+  function moveActive(delta) {
+    if (!candidates.length) return;
+    activeIndex = Math.max(0, Math.min(candidates.length - 1, activeIndex + delta));
+    box.querySelectorAll('.suggestion').forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+    box.querySelector('.suggestion.active')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
+    else if (e.key === 'Escape') { close(); }
+    else if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+      if (candidates.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        pick(activeIndex);
+        advanceFocus(input);
+      }
+      // no candidates: fall through to the global Enter handler (plain advance)
+    }
+  });
+  document.addEventListener('mousedown', (e) => {
+    if (!input.contains(e.target) && !box.contains(e.target)) close();
+  });
+
+  return { close, render };
+}
+
+// ---------- Candidate sources ----------
+function getType1Candidates(query) {
+  const uniq = Array.from(new Set(fcList.map((c) => c.type1).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const q = query.toLowerCase();
+  const filtered = q ? uniq.filter((t) => t.toLowerCase().startsWith(q)) : uniq;
+  return filtered.slice(0, 8).map((value) => ({ value }));
+}
+
+function getType2Candidates(row, query) {
+  const type1Val = row.querySelector('.type1-input').value.trim().toLowerCase();
+  let pool = fcList;
+  if (type1Val) pool = pool.filter((c) => c.type1.toLowerCase() === type1Val);
+  const uniq = Array.from(new Set(pool.map((c) => c.type2).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const q = query.toLowerCase();
+  const filtered = q ? uniq.filter((t) => t.toLowerCase().startsWith(q)) : uniq;
+  return filtered.slice(0, 8).map((value) => ({ value }));
+}
+
+function getColourCandidates(row, query) {
+  const type1Val = row.querySelector('.type1-input').value.trim().toLowerCase();
+  const type2Val = row.querySelector('.type2-input').value.trim().toLowerCase();
+  let pool = fcList;
+  if (type1Val) pool = pool.filter((c) => c.type1.toLowerCase().startsWith(type1Val));
+  if (type2Val) pool = pool.filter((c) => c.type2.toLowerCase().startsWith(type2Val));
+  pool = pool.filter((c) => matchesQuery(c, query));
+  return pool.slice(0, 8);
+}
+
+function getProvinceCandidates(query) {
+  const q = query.toLowerCase();
+  const filtered = q ? provinceChoices.filter((c) => c.toLowerCase().startsWith(q)) : provinceChoices;
+  return filtered.slice(0, 8).map((value) => ({ value }));
+}
+
+// ---------- Color rows ----------
+function removeColourRow(row) {
+  const rows = document.querySelectorAll('.colour-row');
+  if (rows.length <= 1) {
+    row.querySelectorAll('input[type=text]').forEach((i) => (i.value = ''));
+    row.querySelector('.colour-instock').checked = true;
+    delete row.dataset.colourRef;
+    setSwatchPreview(row, null);
+    row.querySelector('.type1-input').focus();
+    return;
+  }
+  const rowsArr = Array.from(rows);
+  const idx = rowsArr.indexOf(row);
+  row.remove();
+  const remaining = document.querySelectorAll('.colour-row');
+  const focusRow = remaining[Math.min(idx, remaining.length - 1)];
+  if (focusRow) focusRow.querySelector('.type1-input').focus();
 }
 
 function addColourRow() {
@@ -316,95 +461,97 @@ function addColourRow() {
   const row = document.createElement('div');
   row.className = 'colour-row';
   row.innerHTML = `
-    <input type="text" class="colour-type-input" list="typeListOptions" placeholder="Type (e.g. PLA Matte)" autocomplete="off">
-    <div class="colour-search-wrap">
-      <input type="text" class="colour-search" placeholder="Type color name, press Enter" autocomplete="off">
-      <div class="colour-suggestions"></div>
+    <div class="suggest-wrap type1-wrap">
+      <input type="text" class="type1-input" placeholder="Type 1 (PLA…)" autocomplete="off" data-kbstop>
+      <div class="suggestions"></div>
+    </div>
+    <div class="suggest-wrap type2-wrap">
+      <input type="text" class="type2-input" placeholder="Type 2 (Matte…)" autocomplete="off" data-kbstop>
+      <div class="suggestions"></div>
+    </div>
+    <div class="suggest-wrap colour-search-wrap">
+      <input type="text" class="colour-search" placeholder="Color name, Enter to pick" autocomplete="off" data-kbstop>
+      <div class="suggestions"></div>
     </div>
     <div class="colour-swatch-preview" title="Selected color"></div>
     <label class="colour-instock-line">
-      <input type="checkbox" class="colour-instock" checked> In stock
+      <input type="checkbox" class="colour-instock" checked data-kbstop> In stock
     </label>
-    <button type="button" class="remove-colour">&times;</button>
+    <button type="button" class="remove-colour" tabindex="-1">&times;</button>
   `;
   wrap.appendChild(row);
 
-  const typeInput = row.querySelector('.colour-type-input');
+  const type1Input = row.querySelector('.type1-input');
+  const type2Input = row.querySelector('.type2-input');
   const searchInput = row.querySelector('.colour-search');
-  const suggestBox = row.querySelector('.colour-suggestions');
+  const [type1Box, type2Box, colourBox] = row.querySelectorAll('.suggestions');
 
-  typeInput.addEventListener('input', () => {
+  function invalidateColourSelection() {
     searchInput.classList.remove('confirmed');
     delete row.dataset.colourRef;
     setSwatchPreview(row, null);
-    renderSuggestions(row);
+  }
+
+  setupSuggest(type1Input, type1Box, {
+    getCandidates: (q) => getType1Candidates(q),
+    renderItem: (c) => `<span>${c.value}</span>`,
+    onSelect: (c) => {
+      type1Input.value = c.value;
+      type2Input.value = '';
+      searchInput.value = '';
+      invalidateColourSelection();
+    },
   });
+  type1Input.addEventListener('input', invalidateColourSelection);
 
-  searchInput.addEventListener('input', () => {
-    searchInput.classList.remove('confirmed');
-    delete row.dataset.colourRef;
-    setSwatchPreview(row, null);
-    renderSuggestions(row);
+  setupSuggest(type2Input, type2Box, {
+    getCandidates: (q) => getType2Candidates(row, q),
+    renderItem: (c) => `<span>${c.value}</span>`,
+    onSelect: (c) => {
+      type2Input.value = c.value;
+      searchInput.value = '';
+      invalidateColourSelection();
+    },
   });
+  type2Input.addEventListener('input', invalidateColourSelection);
 
-  searchInput.addEventListener('focus', () => renderSuggestions(row));
-
-  searchInput.addEventListener('keydown', (e) => {
-    const items = Array.from(suggestBox.querySelectorAll('.colour-suggestion'));
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const candidates = suggestBox._candidates || [];
-      if (candidates.length > 0) {
-        selectCandidate(row, candidates[row._activeIndex || 0]);
-      }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (!items.length) return;
-      row._activeIndex = Math.min((row._activeIndex || 0) + 1, items.length - 1);
-      items.forEach((el, i) => el.classList.toggle('active', i === row._activeIndex));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (!items.length) return;
-      row._activeIndex = Math.max((row._activeIndex || 0) - 1, 0);
-      items.forEach((el, i) => el.classList.toggle('active', i === row._activeIndex));
-    } else if (e.key === 'Escape') {
-      suggestBox.classList.remove('open');
-    }
+  setupSuggest(searchInput, colourBox, {
+    getCandidates: (q) => getColourCandidates(row, q),
+    renderItem: (c) => `
+      <span class="swatch" style="background:${c.hex}"></span>
+      <span>${c.name} — ${c.type1} ${c.type2} (${c.hex})</span>
+    `,
+    onSelect: (c) => {
+      searchInput.value = `${c.name} (${c.hex})`;
+      searchInput.classList.add('confirmed');
+      row.dataset.colourRef = c.id;
+      setSwatchPreview(row, c.hex);
+    },
   });
+  searchInput.addEventListener('input', invalidateColourSelection);
 
-  document.addEventListener('click', (e) => {
-    if (!row.contains(e.target)) suggestBox.classList.remove('open');
-  });
+  row.querySelector('.remove-colour').addEventListener('click', () => removeColourRow(row));
 
-  row.querySelector('.remove-colour').addEventListener('click', () => row.remove());
+  return row;
 }
 
 function refreshProvinceDatalist() {
-  const list = document.getElementById('provinceListOptions');
-  list.innerHTML = provinceChoices.map(c => `<option value="${c}"></option>`).join('');
+  // no-op placeholder kept for clarity; suggestions read provinceChoices live
 }
 
 async function init() {
   try {
     const fc = await grist.docApi.fetchTable('Filament_Colours');
-    const comboSet = new Set();
-    fcList = fc.id.map((id, i) => {
-      const type1 = fc.Type_1[i] || '';
-      const type2 = fc.Type_2[i] || '';
-      const combo = `${type1} ${type2}`.trim();
-      comboSet.add(combo);
-      return {
+    fcList = fc.id
+      .map((id, i) => ({
         id,
         name: fc.Colour_Name[i] || '',
-        type1, type2,
+        type1: fc.Type_1[i] || '',
+        type2: fc.Type_2[i] || '',
         hex: fc.ColourCode[i] || '',
         label: fc.Label[i] || '',
-        typeCombo: combo,
-      };
-    }).sort((a, b) => a.name.localeCompare(b.name));
-    typeCombos = Array.from(comboSet).filter(Boolean).sort();
-    document.getElementById('typeListOptions').innerHTML =
-      typeCombos.map(t => `<option value="${t}"></option>`).join('');
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     // Province (Choice) options from Competitors_ID column "A"
     const idCols = await grist.docApi.fetchTable('_grist_Tables_column');
@@ -417,16 +564,24 @@ async function init() {
     provinceColOpts = JSON.parse(idCols.widgetOptions[aIdx] || '{}');
     provinceChoices = provinceColOpts.choices || [];
     document.getElementById('f_provinceLabel').textContent = idCols.label[aIdx] || 'Province';
-    refreshProvinceDatalist();
+
+    setupSuggest(document.getElementById('f_province'), document.getElementById('provinceSuggestions'), {
+      getCandidates: (q) => getProvinceCandidates(q),
+      renderItem: (c) => `<span>${c.value}</span>`,
+      onSelect: (c) => {
+        document.getElementById('f_province').value = c.value;
+      },
+    });
 
     const ptOpts = JSON.parse(idCols.widgetOptions[ptIdx] || '{}');
     productTypeChoices = ptOpts.choices || [];
     const ptDiv = document.getElementById('productTypeChoices');
-    ptDiv.innerHTML = productTypeChoices.map((c) =>
-      `<label class="checkbox-line"><input type="checkbox" class="pt-choice" value="${c}"> ${c}</label>`
-    ).join('');
+    ptDiv.innerHTML = productTypeChoices
+      .map((c) => `<label class="checkbox-line"><input type="checkbox" class="pt-choice" value="${c}" data-kbstop> ${c}</label>`)
+      .join('');
 
     addColourRow();
+    document.getElementById('f_productName').focus();
   } catch (e) {
     setStatus('Failed to load form data: ' + e.message, 'error');
   }
@@ -446,18 +601,17 @@ function txt(id) {
 // usable (and colored/consistent) right away, without needing to reopen Grist.
 async function ensureProvinceChoice(province) {
   if (!province) return;
-  const alreadyExists = provinceChoices.some(c => c.toLowerCase() === province.toLowerCase());
+  const alreadyExists = provinceChoices.some((c) => c.toLowerCase() === province.toLowerCase());
   if (alreadyExists) return;
   const updatedChoices = [...provinceChoices, province];
   await grist.docApi.applyUserActions([
-    ["ModifyColumn", "Competitors_ID", "A", {
+    ['ModifyColumn', 'Competitors_ID', 'A', {
       type: provinceColType,
       widgetOptions: JSON.stringify({ ...provinceColOpts, choices: updatedChoices }),
-    }]
+    }],
   ]);
   provinceChoices = updatedChoices;
   provinceColOpts = { ...provinceColOpts, choices: updatedChoices };
-  refreshProvinceDatalist();
 }
 
 document.getElementById('submitBtn').addEventListener('click', async () => {
@@ -479,7 +633,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       const searchVal = row.querySelector('.colour-search').value.trim();
       if (!searchVal && !row.dataset.colourRef) continue; // skip fully empty rows
       if (!row.dataset.colourRef) {
-        setStatus(`"${searchVal}" wasn't confirmed — press Enter on a suggestion (or click one) to select it before submitting.`, 'error');
+        setStatus(`"${searchVal}" wasn't confirmed — press Enter on a suggestion to select it before submitting.`, 'error');
         btn.disabled = false;
         return;
       }
@@ -494,7 +648,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       return;
     }
 
-    const productTypeSelected = Array.from(document.querySelectorAll('.pt-choice:checked')).map(c => c.value);
+    const productTypeSelected = Array.from(document.querySelectorAll('.pt-choice:checked')).map((c) => c.value);
     const provinceVal = txt('f_province');
 
     if (provinceVal) {
@@ -504,7 +658,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 
     setStatus('Creating competitor listing...');
     const idResult = await grist.docApi.applyUserActions([
-      ["AddRecord", "Competitors_ID", null, {
+      ['AddRecord', 'Competitors_ID', null, {
         Product_Name: productName,
         Source_Type: txt('f_sourceType'),
         Source_Link: sourceLink,
@@ -515,23 +669,23 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
         Stars: num('f_stars'),
         Review_Num: num('f_reviewNum'),
         A: provinceVal || null,
-        Product_Type: productTypeSelected.length ? ["L", ...productTypeSelected] : null,
-      }]
+        Product_Type: productTypeSelected.length ? ['L', ...productTypeSelected] : null,
+      }],
     ]);
     const newId = idResult.retValues[0];
 
     setStatus(`Adding ${colourEntries.length} color(s), delivery, and pricing...`);
     const followupActions = [
-      ...colourEntries.map(c => ["AddRecord", "Competitors_Colours", null, {
+      ...colourEntries.map((c) => ['AddRecord', 'Competitors_Colours', null, {
         Competitor_ID: newId, Colour: c.colourRef, In_Stock_: c.inStock,
       }]),
-      ["AddRecord", "Competitors_Delivery", null, {
+      ['AddRecord', 'Competitors_Delivery', null, {
         Competitor_ID: newId,
         Instant_Delivery: document.getElementById('f_instant').checked,
         Express_Delivery: document.getElementById('f_express').checked,
         Standard_Delivery: document.getElementById('f_standard').checked,
       }],
-      ["AddRecord", "Competitors_Pricing", null, {
+      ['AddRecord', 'Competitors_Pricing', null, {
         Competitor_ID: newId,
         Original: num('f_original'),
         Discount: num('f_discount'),
@@ -545,11 +699,12 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 
     setStatus(`Done! Created ${cidText} with ${colourEntries.length} color(s), delivery info, and pricing.`, 'success');
 
-    document.querySelectorAll('input[type=text], input[type=url], input[type=number]').forEach(i => i.value = '');
-    document.querySelectorAll('input[type=checkbox]').forEach(i => i.checked = false);
+    document.querySelectorAll('input[type=text], input[type=url], input[type=number]').forEach((i) => (i.value = ''));
+    document.querySelectorAll('input[type=checkbox]').forEach((i) => (i.checked = false));
     document.getElementById('f_province').value = '';
     document.getElementById('colourRows').innerHTML = '';
     addColourRow();
+    document.getElementById('f_productName').focus();
   } catch (e) {
     setStatus('Error: ' + e.message, 'error');
   } finally {
@@ -557,7 +712,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   }
 });
 
-grist.ready({requiredAccess: 'full'});
+grist.ready({ requiredAccess: 'full' });
 init();
 </script>
 </body>
