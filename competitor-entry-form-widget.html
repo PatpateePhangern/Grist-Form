@@ -17,9 +17,23 @@
   .row > div { flex: 1; }
   .checkbox-line { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
   .checkbox-line input { width: auto; }
-  .colour-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; padding: 6px; background: #f7f7f7; border-radius: 4px; }
-  .colour-row input[type=text] { flex: 1; }
-  .colour-row button { flex: 0 0 auto; background: #d9534f; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+  .colour-row { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 6px; background: #f7f7f7; border-radius: 4px; flex-wrap: wrap; }
+  .colour-type { flex: 0 0 150px; }
+  .colour-search-wrap { flex: 1; position: relative; min-width: 160px; }
+  .colour-search { width: 100%; }
+  .colour-search.confirmed { border-color: #16a35a; background: #f0fff4; }
+  .colour-suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc;
+    border-radius: 4px; margin-top: 2px; max-height: 220px; overflow-y: auto; z-index: 10;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: none;
+  }
+  .colour-suggestions.open { display: block; }
+  .colour-suggestion { padding: 7px 9px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .colour-suggestion .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #ccc; flex: 0 0 auto; }
+  .colour-suggestion.active { background: #e6f7ee; }
+  .colour-instock-line { display: flex; align-items: center; gap: 4px; margin: 0; white-space: nowrap; padding-top: 8px; }
+  .colour-instock-line input { width: auto; }
+  .remove-colour { background: #d9534f; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer; align-self: flex-start; margin-top: 2px; }
   #addColourBtn { background: #eee; border: 1px dashed #999; border-radius: 4px; padding: 8px; width: 100%; margin-top: 8px; cursor: pointer; }
   #submitBtn { background: #16a35a; color: white; border: none; border-radius: 4px; padding: 12px; width: 100%; margin-top: 20px; font-size: 15px; cursor: pointer; }
   #submitBtn:disabled { background: #aaa; }
@@ -82,10 +96,9 @@
   <div id="productTypeChoices"></div>
 
   <h3>Colors Sold at This Listing</h3>
-  <div class="hint">Search by name, type, or hex code. Add one row per color/type combo this listing actually sells.</div>
+  <div class="hint">Pick a type to narrow the list, then type the first few letters of the color and press Enter to select it.</div>
   <div id="colourRows"></div>
   <button type="button" id="addColourBtn">+ Add another color</button>
-  <datalist id="colourOptions"></datalist>
 
   <h3>Delivery</h3>
   <div class="checkbox-line"><input type="checkbox" id="f_instant"><label style="margin:0">Instant Delivery</label></div>
@@ -108,7 +121,8 @@
   <div id="status"></div>
 
 <script>
-let colourLabelToRef = {};   // "Label text" -> colRef
+let fcList = [];         // [{id, name, type1, type2, hex, label, typeCombo}]
+let typeCombos = [];     // sorted unique "Type1 Type2" strings
 let provinceChoices = [];
 let productTypeChoices = [];
 
@@ -118,37 +132,149 @@ function setStatus(msg, cls) {
   el.className = cls || '';
 }
 
-function addColourRow(prefill) {
+function matchesQuery(candidate, query) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return candidate.name.toLowerCase().startsWith(q) || candidate.hex.toLowerCase().includes(q);
+}
+
+function getFilteredCandidates(row) {
+  const typeVal = row.querySelector('.colour-type').value;
+  const query = row.querySelector('.colour-search').value.trim();
+  let pool = fcList;
+  if (typeVal) pool = pool.filter(c => c.typeCombo === typeVal);
+  pool = pool.filter(c => matchesQuery(c, query));
+  return pool.slice(0, 8);
+}
+
+function renderSuggestions(row) {
+  const box = row.querySelector('.colour-suggestions');
+  const candidates = getFilteredCandidates(row);
+  row._activeIndex = 0;
+  if (candidates.length === 0) {
+    box.classList.remove('open');
+    box.innerHTML = '';
+    return;
+  }
+  box.innerHTML = candidates.map((c, i) => `
+    <div class="colour-suggestion${i === 0 ? ' active' : ''}" data-idx="${i}">
+      <span class="swatch" style="background:${c.hex}"></span>
+      <span>${c.name} — ${c.type1} ${c.type2} (${c.hex})</span>
+    </div>
+  `).join('');
+  box._candidates = candidates;
+  box.classList.add('open');
+  box.querySelectorAll('.colour-suggestion').forEach(el => {
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const idx = Number(el.dataset.idx);
+      selectCandidate(row, box._candidates[idx]);
+    });
+  });
+}
+
+function selectCandidate(row, candidate) {
+  const input = row.querySelector('.colour-search');
+  input.value = `${candidate.name} (${candidate.hex})`;
+  input.classList.add('confirmed');
+  row.dataset.colourRef = candidate.id;
+  const box = row.querySelector('.colour-suggestions');
+  box.classList.remove('open');
+  box.innerHTML = '';
+}
+
+function addColourRow() {
   const wrap = document.getElementById('colourRows');
   const row = document.createElement('div');
   row.className = 'colour-row';
   row.innerHTML = `
-    <input type="text" class="colour-search" list="colourOptions" placeholder="Search color...">
-    <label style="display:flex;align-items:center;gap:4px;margin:0;white-space:nowrap;">
+    <select class="colour-type">
+      <option value="">All types</option>
+      ${typeCombos.map(t => `<option value="${t}">${t}</option>`).join('')}
+    </select>
+    <div class="colour-search-wrap">
+      <input type="text" class="colour-search" placeholder="Type color name, press Enter" autocomplete="off">
+      <div class="colour-suggestions"></div>
+    </div>
+    <label class="colour-instock-line">
       <input type="checkbox" class="colour-instock" checked> In stock
     </label>
     <button type="button" class="remove-colour">&times;</button>
   `;
   wrap.appendChild(row);
+
+  const typeSelect = row.querySelector('.colour-type');
+  const searchInput = row.querySelector('.colour-search');
+  const suggestBox = row.querySelector('.colour-suggestions');
+
+  typeSelect.addEventListener('change', () => {
+    searchInput.value = '';
+    searchInput.classList.remove('confirmed');
+    delete row.dataset.colourRef;
+    searchInput.focus();
+    renderSuggestions(row);
+  });
+
+  searchInput.addEventListener('input', () => {
+    searchInput.classList.remove('confirmed');
+    delete row.dataset.colourRef;
+    renderSuggestions(row);
+  });
+
+  searchInput.addEventListener('focus', () => renderSuggestions(row));
+
+  searchInput.addEventListener('keydown', (e) => {
+    const items = Array.from(suggestBox.querySelectorAll('.colour-suggestion'));
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const candidates = suggestBox._candidates || [];
+      if (candidates.length > 0) {
+        selectCandidate(row, candidates[row._activeIndex || 0]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!items.length) return;
+      row._activeIndex = Math.min((row._activeIndex || 0) + 1, items.length - 1);
+      items.forEach((el, i) => el.classList.toggle('active', i === row._activeIndex));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!items.length) return;
+      row._activeIndex = Math.max((row._activeIndex || 0) - 1, 0);
+      items.forEach((el, i) => el.classList.toggle('active', i === row._activeIndex));
+    } else if (e.key === 'Escape') {
+      suggestBox.classList.remove('open');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!row.contains(e.target)) suggestBox.classList.remove('open');
+  });
+
   row.querySelector('.remove-colour').addEventListener('click', () => row.remove());
 }
 
 async function init() {
   try {
-    // Filament colors for the searchable datalist
     const fc = await grist.docApi.fetchTable('Filament_Colours');
-    const datalist = document.getElementById('colourOptions');
-    fc.id.forEach((id, i) => {
-      const label = fc.Label[i];
-      colourLabelToRef[label] = id;
-      const opt = document.createElement('option');
-      opt.value = label;
-      datalist.appendChild(opt);
-    });
+    const comboSet = new Set();
+    fcList = fc.id.map((id, i) => {
+      const type1 = fc.Type_1[i] || '';
+      const type2 = fc.Type_2[i] || '';
+      const combo = `${type1} ${type2}`.trim();
+      comboSet.add(combo);
+      return {
+        id,
+        name: fc.Colour_Name[i] || '',
+        type1, type2,
+        hex: fc.ColourCode[i] || '',
+        label: fc.Label[i] || '',
+        typeCombo: combo,
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+    typeCombos = Array.from(comboSet).filter(Boolean).sort();
 
     // Province (Choice) options from Competitors_ID column "A"
     const idCols = await grist.docApi.fetchTable('_grist_Tables_column');
-    // find table rowId for Competitors_ID
     const tables = await grist.docApi.fetchTable('_grist_Tables');
     const cidTableRowId = tables.id[tables.tableId.indexOf('Competitors_ID')];
     const aIdx = idCols.colId.findIndex((c, i) => c === 'A' && idCols.parentId[i] === cidTableRowId);
@@ -163,7 +289,7 @@ async function init() {
     const ptOpts = JSON.parse(idCols.widgetOptions[ptIdx] || '{}');
     productTypeChoices = ptOpts.choices || [];
     const ptDiv = document.getElementById('productTypeChoices');
-    ptDiv.innerHTML = productTypeChoices.map((c, i) =>
+    ptDiv.innerHTML = productTypeChoices.map((c) =>
       `<label class="checkbox-line"><input type="checkbox" class="pt-choice" value="${c}"> ${c}</label>`
     ).join('');
 
@@ -196,18 +322,20 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       return;
     }
 
-    const colourRows = Array.from(document.querySelectorAll('.colour-row'));
+    const colourRowEls = Array.from(document.querySelectorAll('.colour-row'));
     const colourEntries = [];
-    for (const row of colourRows) {
-      const label = row.querySelector('.colour-search').value.trim();
-      if (!label) continue;
-      const ref = colourLabelToRef[label];
-      if (!ref) {
-        setStatus(`Color "${label}" doesn't match anything in the list — pick one from the dropdown suggestions.`, 'error');
+    for (const row of colourRowEls) {
+      const searchVal = row.querySelector('.colour-search').value.trim();
+      if (!searchVal && !row.dataset.colourRef) continue; // skip fully empty rows
+      if (!row.dataset.colourRef) {
+        setStatus(`"${searchVal}" wasn't confirmed — press Enter on a suggestion (or click one) to select it before submitting.`, 'error');
         btn.disabled = false;
         return;
       }
-      colourEntries.push({ colourRef: ref, inStock: row.querySelector('.colour-instock').checked });
+      colourEntries.push({
+        colourRef: Number(row.dataset.colourRef),
+        inStock: row.querySelector('.colour-instock').checked,
+      });
     }
     if (colourEntries.length === 0) {
       setStatus('Add at least one color.', 'error');
@@ -254,14 +382,12 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     ];
     await grist.docApi.applyUserActions(followupActions);
 
-    // Fetch the generated Competitor_ID text for confirmation
     const idRecords = await grist.docApi.fetchTable('Competitors_ID');
     const idx = idRecords.id.indexOf(newId);
     const cidText = idRecords.Competitor_ID[idx];
 
     setStatus(`Done! Created ${cidText} with ${colourEntries.length} color(s), delivery info, and pricing.`, 'success');
 
-    // Reset form for the next entry
     document.querySelectorAll('input[type=text], input[type=url], input[type=number]').forEach(i => i.value = '');
     document.querySelectorAll('input[type=checkbox]').forEach(i => i.checked = false);
     document.getElementById('f_province').value = '';
