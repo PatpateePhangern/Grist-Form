@@ -6,44 +6,131 @@
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, sans-serif; padding: 16px; margin: 0; color: #222; max-width: 640px; }
-  h3 { margin: 18px 0 8px; padding-top: 12px; border-top: 1px solid #e0e0e0; }
-  h3:first-child { margin-top: 0; padding-top: 0; border-top: none; }
-  label { display: block; font-size: 12px; color: #666; margin-top: 8px; }
-  input[type=text], input[type=number], input[type=url], select {
-    font-size: 14px; padding: 7px; margin-top: 2px; width: 100%; border: 1px solid #ccc; border-radius: 4px;
+
+  :root {
+    --bg: #ffffff;
+    --fg: #222222;
+    --muted: #666666;
+    --hint: #999999;
+    --border: #cccccc;
+    --input-bg: #ffffff;
+    --input-fg: #222222;
+    --panel-bg: #f7f7f7;
+    --suggestion-bg: #ffffff;
+    --suggestion-hover-bg: #e6f7ee;
+    --confirmed-border: #16a35a;
+    --confirmed-bg: #f0fff4;
+    --accent: #16a35a;
+    --accent-fg: #ffffff;
+    --accent-disabled: #aaaaaa;
+    --error: #b00020;
+    --success: #16a35a;
+    --shadow: rgba(0, 0, 0, 0.15);
+    --divider: #e0e0e0;
+    --swatch-border: #cccccc;
+    --remove-bg: #d9534f;
+    --remove-fg: #ffffff;
+    --add-border: #999999;
+    --add-bg: #eeeeee;
   }
+
+  [data-theme="dark"] {
+    --bg: #1e1f22;
+    --fg: #e8e8ea;
+    --muted: #a5a6ab;
+    --hint: #7c7d82;
+    --border: #4a4b50;
+    --input-bg: #2b2c30;
+    --input-fg: #f0f0f2;
+    --panel-bg: #28292d;
+    --suggestion-bg: #2b2c30;
+    --suggestion-hover-bg: #28402f;
+    --confirmed-border: #3ecf7e;
+    --confirmed-bg: #1d2e20;
+    --accent: #2fbf71;
+    --accent-fg: #07130c;
+    --accent-disabled: #4a4b50;
+    --error: #ff7b72;
+    --success: #3ecf7e;
+    --shadow: rgba(0, 0, 0, 0.6);
+    --divider: #3a3b40;
+    --swatch-border: #55565c;
+    --remove-bg: #a6392c;
+    --remove-fg: #ffffff;
+    --add-border: #5a5b60;
+    --add-bg: #2b2c30;
+  }
+
+  html, body { background: var(--bg); }
+  body {
+    font-family: -apple-system, sans-serif; padding: 16px; margin: 0; color: var(--fg);
+    max-width: 640px; position: relative;
+  }
+  h3 { margin: 18px 0 8px; padding-top: 12px; border-top: 1px solid var(--divider); }
+  h3:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  input[type=text], input[type=number], input[type=url], select {
+    font-size: 14px; padding: 7px; margin-top: 2px; width: 100%; border: 1px solid var(--border);
+    border-radius: 4px; background: var(--input-bg); color: var(--input-fg);
+  }
+  input::placeholder { color: var(--hint); }
   .row { display: flex; gap: 10px; }
   .row > div { flex: 1; }
   .checkbox-line { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
   .checkbox-line input { width: auto; }
-  .colour-row { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 6px; background: #f7f7f7; border-radius: 4px; flex-wrap: wrap; }
-  .colour-type { flex: 0 0 150px; }
+
+  .theme-toggle {
+    position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--panel-bg); color: var(--fg); cursor: pointer;
+    font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+
+  .colour-row {
+    display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 8px;
+    background: var(--panel-bg); border-radius: 4px; flex-wrap: wrap;
+  }
+  .colour-type-input { flex: 0 0 150px; margin-top: 0; }
   .colour-search-wrap { flex: 1; position: relative; min-width: 160px; }
-  .colour-search { width: 100%; }
-  .colour-search.confirmed { border-color: #16a35a; background: #f0fff4; }
+  .colour-search { width: 100%; margin-top: 0; }
+  .colour-search.confirmed { border-color: var(--confirmed-border); background: var(--confirmed-bg); }
   .colour-suggestions {
-    position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc;
+    position: absolute; top: 100%; left: 0; right: 0; background: var(--suggestion-bg); border: 1px solid var(--border);
     border-radius: 4px; margin-top: 2px; max-height: 220px; overflow-y: auto; z-index: 10;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: none;
+    box-shadow: 0 4px 10px var(--shadow); display: none;
   }
   .colour-suggestions.open { display: block; }
-  .colour-suggestion { padding: 7px 9px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-  .colour-suggestion .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #ccc; flex: 0 0 auto; }
-  .colour-suggestion.active { background: #e6f7ee; }
+  .colour-suggestion { padding: 7px 9px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; color: var(--fg); }
+  .colour-suggestion .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--swatch-border); flex: 0 0 auto; }
+  .colour-suggestion.active { background: var(--suggestion-hover-bg); }
+  .colour-swatch-preview {
+    flex: 0 0 30px; width: 30px; height: 30px; border-radius: 5px; border: 1px dashed var(--swatch-border);
+    background: transparent; margin-top: 0;
+  }
+  .colour-swatch-preview.filled { border-style: solid; }
   .colour-instock-line { display: flex; align-items: center; gap: 4px; margin: 0; white-space: nowrap; padding-top: 8px; }
   .colour-instock-line input { width: auto; }
-  .remove-colour { background: #d9534f; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer; align-self: flex-start; margin-top: 2px; }
-  #addColourBtn { background: #eee; border: 1px dashed #999; border-radius: 4px; padding: 8px; width: 100%; margin-top: 8px; cursor: pointer; }
-  #submitBtn { background: #16a35a; color: white; border: none; border-radius: 4px; padding: 12px; width: 100%; margin-top: 20px; font-size: 15px; cursor: pointer; }
-  #submitBtn:disabled { background: #aaa; }
-  #status { margin-top: 12px; white-space: pre-wrap; font-size: 13px; color: #555; min-height: 20px; }
-  #status.error { color: #b00020; }
-  #status.success { color: #16a35a; font-weight: 600; }
-  .hint { font-size: 11px; color: #999; margin-top: 2px; }
+  .remove-colour {
+    background: var(--remove-bg); color: var(--remove-fg); border: none; border-radius: 4px;
+    padding: 6px 10px; cursor: pointer; align-self: flex-start; margin-top: 2px;
+  }
+  #addColourBtn {
+    background: var(--add-bg); border: 1px dashed var(--add-border); color: var(--fg); border-radius: 4px;
+    padding: 8px; width: 100%; margin-top: 8px; cursor: pointer;
+  }
+  #submitBtn {
+    background: var(--accent); color: var(--accent-fg); border: none; border-radius: 4px;
+    padding: 12px; width: 100%; margin-top: 20px; font-size: 15px; cursor: pointer; font-weight: 600;
+  }
+  #submitBtn:disabled { background: var(--accent-disabled); color: var(--fg); }
+  #status { margin-top: 12px; white-space: pre-wrap; font-size: 13px; color: var(--muted); min-height: 20px; }
+  #status.error { color: var(--error); }
+  #status.success { color: var(--success); font-weight: 600; }
+  .hint { font-size: 11px; color: var(--hint); margin-top: 2px; }
 </style>
 </head>
 <body>
+  <button type="button" class="theme-toggle" id="themeToggle" title="Toggle light/dark">🌙</button>
+
   <h3>Competitor Info</h3>
   <label>Product Name</label>
   <input type="text" id="f_productName">
@@ -88,7 +175,9 @@
     </div>
     <div>
       <label id="f_provinceLabel">Province</label>
-      <select id="f_province"></select>
+      <input type="text" id="f_province" list="provinceListOptions" placeholder="Type or pick a province">
+      <datalist id="provinceListOptions"></datalist>
+      <div class="hint">Type a new one and it'll be added automatically.</div>
     </div>
   </div>
 
@@ -96,8 +185,9 @@
   <div id="productTypeChoices"></div>
 
   <h3>Colors Sold at This Listing</h3>
-  <div class="hint">Pick a type to narrow the list, then type the first few letters of the color and press Enter to select it.</div>
+  <div class="hint">Type a type (e.g. "PLA Matte") to narrow the list — or leave it blank for all types. Type the first few letters of the color and press Enter to select it.</div>
   <div id="colourRows"></div>
+  <datalist id="typeListOptions"></datalist>
   <button type="button" id="addColourBtn">+ Add another color</button>
 
   <h3>Delivery</h3>
@@ -121,10 +211,36 @@
   <div id="status"></div>
 
 <script>
+// ---------- Theme ----------
+function getPreferredTheme() {
+  const stored = localStorage.getItem('competitorFormTheme');
+  if (stored === 'dark' || stored === 'light') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('themeToggle').textContent = '☀️';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('themeToggle').textContent = '🌙';
+  }
+  localStorage.setItem('competitorFormTheme', theme);
+}
+let currentTheme = getPreferredTheme();
+applyTheme(currentTheme);
+document.getElementById('themeToggle').addEventListener('click', () => {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  applyTheme(currentTheme);
+});
+
+// ---------- State ----------
 let fcList = [];         // [{id, name, type1, type2, hex, label, typeCombo}]
 let typeCombos = [];     // sorted unique "Type1 Type2" strings
 let provinceChoices = [];
 let productTypeChoices = [];
+let provinceColType = 'Choice';
+let provinceColOpts = {};
 
 function setStatus(msg, cls) {
   const el = document.getElementById('status');
@@ -139,12 +255,23 @@ function matchesQuery(candidate, query) {
 }
 
 function getFilteredCandidates(row) {
-  const typeVal = row.querySelector('.colour-type').value;
+  const typeVal = row.querySelector('.colour-type-input').value.trim().toLowerCase();
   const query = row.querySelector('.colour-search').value.trim();
   let pool = fcList;
-  if (typeVal) pool = pool.filter(c => c.typeCombo === typeVal);
+  if (typeVal) pool = pool.filter(c => c.typeCombo.toLowerCase().includes(typeVal));
   pool = pool.filter(c => matchesQuery(c, query));
   return pool.slice(0, 8);
+}
+
+function setSwatchPreview(row, hex) {
+  const preview = row.querySelector('.colour-swatch-preview');
+  if (hex) {
+    preview.style.background = hex;
+    preview.classList.add('filled');
+  } else {
+    preview.style.background = 'transparent';
+    preview.classList.remove('filled');
+  }
 }
 
 function renderSuggestions(row) {
@@ -178,6 +305,7 @@ function selectCandidate(row, candidate) {
   input.value = `${candidate.name} (${candidate.hex})`;
   input.classList.add('confirmed');
   row.dataset.colourRef = candidate.id;
+  setSwatchPreview(row, candidate.hex);
   const box = row.querySelector('.colour-suggestions');
   box.classList.remove('open');
   box.innerHTML = '';
@@ -188,14 +316,12 @@ function addColourRow() {
   const row = document.createElement('div');
   row.className = 'colour-row';
   row.innerHTML = `
-    <select class="colour-type">
-      <option value="">All types</option>
-      ${typeCombos.map(t => `<option value="${t}">${t}</option>`).join('')}
-    </select>
+    <input type="text" class="colour-type-input" list="typeListOptions" placeholder="Type (e.g. PLA Matte)" autocomplete="off">
     <div class="colour-search-wrap">
       <input type="text" class="colour-search" placeholder="Type color name, press Enter" autocomplete="off">
       <div class="colour-suggestions"></div>
     </div>
+    <div class="colour-swatch-preview" title="Selected color"></div>
     <label class="colour-instock-line">
       <input type="checkbox" class="colour-instock" checked> In stock
     </label>
@@ -203,21 +329,21 @@ function addColourRow() {
   `;
   wrap.appendChild(row);
 
-  const typeSelect = row.querySelector('.colour-type');
+  const typeInput = row.querySelector('.colour-type-input');
   const searchInput = row.querySelector('.colour-search');
   const suggestBox = row.querySelector('.colour-suggestions');
 
-  typeSelect.addEventListener('change', () => {
-    searchInput.value = '';
+  typeInput.addEventListener('input', () => {
     searchInput.classList.remove('confirmed');
     delete row.dataset.colourRef;
-    searchInput.focus();
+    setSwatchPreview(row, null);
     renderSuggestions(row);
   });
 
   searchInput.addEventListener('input', () => {
     searchInput.classList.remove('confirmed');
     delete row.dataset.colourRef;
+    setSwatchPreview(row, null);
     renderSuggestions(row);
   });
 
@@ -253,6 +379,11 @@ function addColourRow() {
   row.querySelector('.remove-colour').addEventListener('click', () => row.remove());
 }
 
+function refreshProvinceDatalist() {
+  const list = document.getElementById('provinceListOptions');
+  list.innerHTML = provinceChoices.map(c => `<option value="${c}"></option>`).join('');
+}
+
 async function init() {
   try {
     const fc = await grist.docApi.fetchTable('Filament_Colours');
@@ -272,6 +403,8 @@ async function init() {
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
     typeCombos = Array.from(comboSet).filter(Boolean).sort();
+    document.getElementById('typeListOptions').innerHTML =
+      typeCombos.map(t => `<option value="${t}"></option>`).join('');
 
     // Province (Choice) options from Competitors_ID column "A"
     const idCols = await grist.docApi.fetchTable('_grist_Tables_column');
@@ -280,11 +413,11 @@ async function init() {
     const aIdx = idCols.colId.findIndex((c, i) => c === 'A' && idCols.parentId[i] === cidTableRowId);
     const ptIdx = idCols.colId.findIndex((c, i) => c === 'Product_Type' && idCols.parentId[i] === cidTableRowId);
 
-    const aOpts = JSON.parse(idCols.widgetOptions[aIdx] || '{}');
-    provinceChoices = aOpts.choices || [];
+    provinceColType = idCols.type[aIdx];
+    provinceColOpts = JSON.parse(idCols.widgetOptions[aIdx] || '{}');
+    provinceChoices = provinceColOpts.choices || [];
     document.getElementById('f_provinceLabel').textContent = idCols.label[aIdx] || 'Province';
-    const provSelect = document.getElementById('f_province');
-    provSelect.innerHTML = '<option value=""></option>' + provinceChoices.map(c => `<option value="${c}">${c}</option>`).join('');
+    refreshProvinceDatalist();
 
     const ptOpts = JSON.parse(idCols.widgetOptions[ptIdx] || '{}');
     productTypeChoices = ptOpts.choices || [];
@@ -307,6 +440,24 @@ function num(id) {
 }
 function txt(id) {
   return document.getElementById(id).value.trim();
+}
+
+// Adds a new province choice to the Competitors_ID.A column definition so it's
+// usable (and colored/consistent) right away, without needing to reopen Grist.
+async function ensureProvinceChoice(province) {
+  if (!province) return;
+  const alreadyExists = provinceChoices.some(c => c.toLowerCase() === province.toLowerCase());
+  if (alreadyExists) return;
+  const updatedChoices = [...provinceChoices, province];
+  await grist.docApi.applyUserActions([
+    ["ModifyColumn", "Competitors_ID", "A", {
+      type: provinceColType,
+      widgetOptions: JSON.stringify({ ...provinceColOpts, choices: updatedChoices }),
+    }]
+  ]);
+  provinceChoices = updatedChoices;
+  provinceColOpts = { ...provinceColOpts, choices: updatedChoices };
+  refreshProvinceDatalist();
 }
 
 document.getElementById('submitBtn').addEventListener('click', async () => {
@@ -344,6 +495,12 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     }
 
     const productTypeSelected = Array.from(document.querySelectorAll('.pt-choice:checked')).map(c => c.value);
+    const provinceVal = txt('f_province');
+
+    if (provinceVal) {
+      setStatus('Checking province...');
+      await ensureProvinceChoice(provinceVal);
+    }
 
     setStatus('Creating competitor listing...');
     const idResult = await grist.docApi.applyUserActions([
@@ -357,7 +514,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
         Item_Number: num('f_itemNumber'),
         Stars: num('f_stars'),
         Review_Num: num('f_reviewNum'),
-        A: txt('f_province') || null,
+        A: provinceVal || null,
         Product_Type: productTypeSelected.length ? ["L", ...productTypeSelected] : null,
       }]
     ]);
